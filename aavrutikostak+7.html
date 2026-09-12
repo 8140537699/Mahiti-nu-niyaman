@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <title>ધોરણ 6 - માહિતીનું નિયમન</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Arial', sans-serif; background-color: #1a252f; 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; overflow: hidden;
+        }
+        .screen { 
+            width: 98vw; height: 95vh; background: #ffffff; 
+            border-radius: 15px; display: flex; flex-direction: column; 
+            padding: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        .subject-nav { display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; }
+        .sub-btn { 
+            padding: 10px 25px; font-size: 1.1rem; cursor: pointer; border: 2px solid #bdc3c7; 
+            border-radius: 10px; background: #ecf0f1; font-weight: bold;
+        }
+        .sub-btn.active { background: #e67e22; color: white; border-color: #d35400; }
+        
+        /* રકમ માટેની નવી સ્ટાઇલ */
+        .data-box { 
+            background: #fff9c4; padding: 15px; border: 2px solid #fbc02d; 
+            border-radius: 10px; margin-bottom: 15px;
+        }
+        .data-row {
+            display: flex; justify-content: space-around; /* નામ વચ્ચે સરખી સ્પેસ રાખશે */
+            margin: 5px 0; font-size: 1.2rem; font-weight: bold; color: #2c3e50;
+        }
+
+        .main-content { display: flex; flex: 1; gap: 20px; min-height: 0; }
+        .table-area { flex: 2.5; background: white; border-radius: 8px; overflow-y: auto; border: 2px solid #34495e; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 2px solid #34495e; padding: 10px; text-align: center; }
+        th { background: #34495e; color: white; position: sticky; top: 0; }
+        
+        .drop-zone { min-height: 60px; background: #f9f9f9; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
+        .tally-group { font-size: 32px; font-weight: bold; color: #e74c3c; text-decoration: line-through; margin-right: 8px; }
+        .tally-unit { font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #2980b9; }
+        
+        .number-control { display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .num-btn { width: 40px; height: 40px; font-size: 20px; cursor: pointer; border-radius: 5px; border: 2px solid #3498db; background: white; }
+        .num-display { font-size: 24px; font-weight: bold; min-width: 40px; }
+        
+        .controls-area { flex: 1; display: flex; flex-direction: column; justify-content: space-between; background: #f4f7f6; padding: 15px; border-radius: 12px; border: 2px solid #ddd; }
+        .flash-card-container { text-align: center; padding: 15px; background: white; border: 3px solid #ffeb3b; border-radius: 12px; margin-top: 10px; }
+        .single-card { width: 60px; height: 80px; background: #ffeb3b; border: 3px solid #fbc02d; display: inline-flex; align-items: center; justify-content: center; font-size: 40px; cursor: grab; font-weight: bold; border-radius: 8px; }
+        
+        .btn { padding: 12px; font-size: 1.1rem; cursor: pointer; border: none; border-radius: 8px; color: white; font-weight: bold; width: 100%; margin-bottom: 8px; }
+        .btn-clear { background: #e74c3c; }
+        .btn-undo { background: #f39c12; }
+        .btn-check { background: #27ae60; margin-top: auto; }
+        #feedback { font-size: 1.3rem; font-weight: bold; text-align: center; min-height: 40px; }
+    </style>
+</head>
+<body>
+
+<div class="screen">
+    <div class="subject-nav">
+        <button class="sub-btn active" id="btn-fruits" onclick="changeSubject('fruits')">🍎 ફળ</button>
+        <button class="sub-btn" id="btn-sweets" onclick="changeSubject('sweets')">🍬 મીઠાઈ</button>
+        <button class="sub-btn" id="btn-marks" onclick="changeSubject('marks')">📝 પરીક્ષા ગુણ</button>
+    </div>
+
+    <div id="dataDisplay" class="data-box"></div>
+
+    <div class="main-content">
+        <div class="table-area">
+            <table>
+                <thead>
+                    <tr>
+                        <th width="25%">નામ</th>
+                        <th width="50%">આવૃત્તિ ચિહ્ન</th>
+                        <th width="25%">સંખ્યા</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="controls-area">
+            <div>
+                <button class="btn btn-undo" onclick="undoTally()">Undo (છેલ્લું કાઢો)</button>
+                <button class="btn btn-clear" onclick="clearTable()">બધું સાફ કરો</button>
+                
+                <div class="flash-card-container">
+                    <p style="margin:0 0 10px 0; font-weight:bold;">ચિહ્ન ખેંચો:</p>
+                    <div class="single-card" draggable="true" ondragstart="drag(event)">|</div>
+                </div>
+            </div>
+            <div id="feedback"></div>
+            <button class="btn btn-check" onclick="checkAnswer()">જવાબ તપાસો</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const subjects = {
+        fruits: { items: ["સફરજન", "કેળા", "કેરી", "જામફળ"] },
+        sweets: { items: ["લાડુ", "પેંડા", "જલેબી", "બરફી"] },
+        marks: { items: ["5 ગુણ", "7 ગુણ", "8 ગુણ", "10 ગુણ"] }
+    };
+
+    let currentSub = 'fruits';
+    let dataCounts = {}, tallyTrack = {}, userCounts = {};
+    let lastAction = []; // Undo માટે હિસ્ટ્રી રાખવા
+
+    function speak(text) {
+        let msg = new SpeechSynthesisUtterance();
+        msg.text = text;
+        msg.lang = 'gu-IN';
+        window.speechSynthesis.speak(msg);
+    }
+
+    function changeSubject(sub) {
+        currentSub = sub;
+        document.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-' + sub).classList.add('active');
+        initGame();
+    }
+
+    function initGame() {
+        let rawData = [];
+        dataCounts = {}; tallyTrack = {}; userCounts = {}; lastAction = [];
+        let pool = subjects[currentSub].items;
+        pool.forEach(i => { dataCounts[i] = 0; tallyTrack[i] = 0; userCounts[i] = 0; });
+
+        // 20 રેન્ડમ ડેટા જનરેટ કરો
+        for(let i=0; i<20; i++) {
+            let item = pool[Math.floor(Math.random() * pool.length)];
+            rawData.push(item);
+            dataCounts[item]++;
+        }
+
+        // ડેટાને 10-10 ની બે હરોળમાં ગોઠવો
+        let row1 = rawData.slice(0, 10);
+        let row2 = rawData.slice(10, 20);
+
+        let dataHtml = `
+            <div class="data-row">${row1.map(n => `<span>${n}</span>`).join("")}</div>
+            <div class="data-row">${row2.map(n => `<span>${n}</span>`).join("")}</div>
+        `;
+        document.getElementById('dataDisplay').innerHTML = dataHtml;
+        
+        renderTable();
+        document.getElementById('feedback').innerHTML = "";
+    }
+
+    function renderTable() {
+        let html = "";
+        subjects[currentSub].items.forEach(item => {
+            html += `<tr data-item="${item}">
+                <td><b style="font-size:1.2rem;">${item}</b></td>
+                <td class="drop-zone" id="zone-${item}" ondrop="drop(event)" ondragover="allow(event)"></td>
+                <td>
+                    <div class="number-control">
+                        <button class="num-btn" onclick="changeCount('${item}', -1)">-</button>
+                        <div class="num-display" id="num-${item}">0</div>
+                        <button class="num-btn" onclick="changeCount('${item}', 1)">+</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('tableBody').innerHTML = html;
+    }
+
+    function changeCount(item, delta) {
+        userCounts[item] = Math.max(0, userCounts[item] + delta);
+        document.getElementById(`num-${item}`).innerText = userCounts[item];
+    }
+
+    function allow(ev) { ev.preventDefault(); }
+    function drag(ev) { ev.dataTransfer.setData("text", "|"); }
+
+    function drop(ev) {
+        ev.preventDefault();
+        let zone = ev.target.closest('.drop-zone');
+        if(!zone) return;
+        let itemName = zone.closest('tr').dataset.item;
+        
+        tallyTrack[itemName]++;
+        lastAction.push(itemName); // Undo માટે નામ સેવ કરો
+        updateTallyDisplay(itemName);
+    }
+
+    // Undo ફંક્શન
+    function undoTally() {
+        if(lastAction.length > 0) {
+            let lastItem = lastAction.pop();
+            tallyTrack[lastItem] = Math.max(0, tallyTrack[lastItem] - 1);
+            updateTallyDisplay(lastItem);
+        }
+    }
+
+    function updateTallyDisplay(itemName) {
+        let zone = document.getElementById(`zone-${itemName}`);
+        let count = tallyTrack[itemName], groups = Math.floor(count / 5), rem = count % 5, html = "";
+        for(let i=0; i<groups; i++) html += `<span class="tally-group">||||</span>`;
+        if(rem > 0) html += `<span class="tally-unit">${"|".repeat(rem)}</span>`;
+        zone.innerHTML = html;
+    }
+
+    function clearTable() { initGame(); }
+
+    function checkAnswer() {
+        let correct = true;
+        subjects[currentSub].items.forEach(item => {
+            if(tallyTrack[item] !== dataCounts[item] || userCounts[item] !== dataCounts[item]) correct = false;
+        });
+
+        let fb = document.getElementById('feedback');
+        if(correct) {
+            fb.innerHTML = "<span style='color:#27ae60'>🎉 સાચું છે! 🏆</span>";
+            speak("ખૂબ સરસ! તમારો જવાબ સાચો છે!");
+        } else {
+            fb.innerHTML = "<span style='color:#e74c3c'>❌ ખોટું છે, ફરી ગણો.</span>";
+            speak("જવાબ ખોટો છે. ફરી પ્રયત્ન કરો.");
+        }
+    }
+
+    initGame();
+</script>
+</body>
+</html>
